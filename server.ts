@@ -159,26 +159,47 @@ async function startServer() {
 
   // Auth Routes
   app.post("/api/auth/signup", (req, res) => {
+    console.log("Signup request:", req.body);
     const { name, email, password, role, phone, address } = req.body;
-    const hashedPassword = bcrypt.hashSync(password, 10);
+    if (!email || !password || !name || !role) {
+      return res.status(400).json({ error: "All fields (name, email, password, role) are required" });
+    }
+    
     try {
+      const existingUser = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "User with this email already exists" });
+      }
+
+      const hashedPassword = bcrypt.hashSync(password, 10);
       const result = db.prepare("INSERT INTO users (name, email, password, role, phone, address) VALUES (?, ?, ?, ?, ?, ?)").run(
-        name, email, hashedPassword, role, phone, address
+        name, email, hashedPassword, role, phone || null, address || null
       );
-      res.json({ id: result.lastInsertRowid });
+      
+      console.log("Signup successful for:", email);
+      res.json({ success: true, id: result.lastInsertRowid });
     } catch (err: any) {
-      res.status(400).json({ error: err.message });
+      console.error("Signup error:", err.message);
+      res.status(500).json({ error: "Internal server error during signup" });
     }
   });
 
   app.post("/api/auth/login", (req, res) => {
+    console.log("Login attempt:", req.body.email);
     const { email, password } = req.body;
-    const user: any = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
-    if (user && bcrypt.compareSync(password, user.password)) {
-      const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || "secret");
-      res.json({ token, user: { id: user.id, name: user.name, role: user.role, email: user.email } });
-    } else {
-      res.status(401).json({ error: "Invalid credentials" });
+    try {
+      const user: any = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+      if (user && bcrypt.compareSync(password, user.password)) {
+        const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || "secret");
+        console.log("Login successful:", email);
+        res.json({ token, user: { id: user.id, name: user.name, role: user.role, email: user.email } });
+      } else {
+        console.log("Login failed: Invalid credentials for", email);
+        res.status(401).json({ error: "Invalid credentials" });
+      }
+    } catch (err: any) {
+      console.error("Login error:", err.message);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 

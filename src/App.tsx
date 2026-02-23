@@ -86,14 +86,30 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('customer');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLogin) {
-      await login(email, password);
-    } else {
-      await signup({ name, email, password, role });
-      setIsLogin(true);
+    setError('');
+    setMessage('');
+    try {
+      if (isLogin) {
+        const result = await login(email, password);
+        if (result?.error) {
+          setError(result.error);
+        }
+      } else {
+        const result = await signup({ name, email, password, role });
+        if (result.error) {
+          setError(result.error);
+        } else {
+          setMessage('Signup successful! Please login.');
+          setIsLogin(true);
+        }
+      }
+    } catch (err: any) {
+      setError('Something went wrong. Please try again.');
     }
   };
 
@@ -108,6 +124,18 @@ const Login = () => {
           <h1 className="text-3xl font-bold text-orange-600">Alif Layla</h1>
           <p className="text-gray-500 mt-2">{isLogin ? 'Welcome Back!' : 'Create Account'}</p>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm font-medium border border-red-100">
+            {error}
+          </div>
+        )}
+
+        {message && (
+          <div className="mb-4 p-3 bg-green-50 text-green-600 rounded-xl text-sm font-medium border border-green-100">
+            {message}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
@@ -840,26 +868,40 @@ export default function App() {
   }, []);
 
   const login = async (email: string, pass: string) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass })
-    });
-    const data = await res.json();
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setUser(data.user);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+        return { success: true };
+      }
+      return data;
+    } catch (err) {
+      return { error: 'Failed to connect to server' };
     }
   };
 
   const signup = async (userData: any) => {
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-    return res.json();
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error || 'Signup failed' };
+      }
+      return data;
+    } catch (err) {
+      return { error: 'Failed to connect to server' };
+    }
   };
 
   const logout = () => {
