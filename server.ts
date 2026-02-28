@@ -26,8 +26,9 @@ try {
 
 let db: any;
 try {
-  db = new Database("alif_layla.db");
-  console.log("Database connected successfully");
+  const dbPath = process.env.NODE_ENV === 'production' && process.env.RENDER ? '/data/alif_layla.db' : 'alif_layla.db';
+  db = new Database(dbPath);
+  console.log(`Database connected successfully at ${dbPath}`);
 } catch (err) {
   console.error("Failed to connect to database:", err);
   process.exit(1);
@@ -223,7 +224,7 @@ async function startServer() {
   const app = express();
   const httpServer = createServer(app);
   const io = new Server(httpServer);
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 

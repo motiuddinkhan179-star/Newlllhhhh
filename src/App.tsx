@@ -2728,6 +2728,9 @@ export default function App() {
                 </Routes>
                 {user.role !== 'admin' && (
                   <>
+                    <div className="fixed top-4 right-4 z-50 bg-white rounded-full shadow-lg border border-gray-100">
+                      <NotificationBell />
+                    </div>
                     <FloatingCart />
                     <BottomNav role={user.role} />
                   </>
