@@ -2,6 +2,8 @@
   "name": "Alif Layla",
   "description": "A comprehensive food delivery system with Customer, Delivery, Restaurant, Kitchen, and Admin applications.",
   "requestFramePermissions": [
-    "geolocation"
+    "geolocation",
+    "camera",
+    "microphone"
   ]
 }
